@@ -4,6 +4,7 @@ import { Button } from "@/components/Button";
 import {
   PermissionDeniedError,
   canShare,
+  copyPhoto,
   saveToPhotos,
   sharePhoto,
 } from "@/lib/photo";
@@ -12,33 +13,53 @@ import { useTheme } from "@/lib/theme";
 
 type Failure = { message: string; openSettings?: boolean };
 
-// Lets "Saving…" / "Opening…" paint before the render, which runs on the JS
-// thread.
+// Lets "Copying…" / "Opening…" / "Saving…" paint before the render, which runs
+// on the JS thread.
 function nextFrame() {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
 export function ExportActions({
   render,
+  renderBase64,
   format,
   filename,
 }: {
   render: () => Uint8Array;
+  renderBase64: () => string;
   format: ExportFormat;
   filename: string;
 }) {
   const theme = useTheme();
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [shareAvailable, setShareAvailable] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   // One full-size render at a time.
-  const busy = sharing || saving;
+  const busy = copying || sharing || saving;
 
   useEffect(() => {
     canShare().then(setShareAvailable);
   }, []);
+
+  async function onCopy() {
+    if (busy) return;
+    setFailure(null);
+    setCopying(true);
+    try {
+      await nextFrame();
+      await copyPhoto(renderBase64());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setFailure({ message: "Couldn't copy the photo." });
+    } finally {
+      setCopying(false);
+    }
+  }
 
   async function onShare() {
     if (busy) return;
@@ -79,13 +100,22 @@ export function ExportActions({
 
   return (
     <View style={styles.column}>
-      {shareAvailable && (
+      <View style={styles.row}>
         <Button
-          title={sharing ? "Opening…" : "Share"}
-          onPress={onShare}
+          title={copying ? "Copying…" : copied ? "✓ Copied" : "Copy"}
+          onPress={onCopy}
           disabled={busy}
+          style={styles.grow}
         />
-      )}
+        {shareAvailable && (
+          <Button
+            title={sharing ? "Opening…" : "Share"}
+            onPress={onShare}
+            disabled={busy}
+            style={styles.grow}
+          />
+        )}
+      </View>
       <Button
         variant="primary"
         title={saving ? "Saving…" : saved ? "✓ Saved to Photos" : "Save to Photos"}
@@ -116,6 +146,8 @@ export function ExportActions({
 
 const styles = StyleSheet.create({
   column: { gap: 8 },
+  row: { flexDirection: "row", gap: 8 },
+  grow: { flex: 1 },
   failure: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -1,4 +1,5 @@
 import { Skia, type SkImage } from "@shopify/react-native-skia";
+import * as Clipboard from "expo-clipboard";
 import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
@@ -88,4 +89,9 @@ export async function sharePhoto(
     UTI: format.uti,
     dialogTitle: "Share photo",
   });
+}
+
+// Puts the photo on the clipboard, ready to paste into a listing or a chat.
+export function copyPhoto(base64: string) {
+  return Clipboard.setImageAsync(base64);
 }

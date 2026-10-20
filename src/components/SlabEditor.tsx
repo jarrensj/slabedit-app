@@ -20,6 +20,7 @@ import {
   moveBox,
   newBox,
   renderEdited,
+  renderEditedBase64,
   resizeBox,
 } from "@/lib/slab-image";
 import { type Theme, useTheme } from "@/lib/theme";
@@ -272,6 +273,9 @@ export function SlabEditor() {
         </View>
         <ExportActions
           render={() => renderEdited(photo.image, boxes, format.format)}
+          renderBase64={() =>
+            renderEditedBase64(photo.image, boxes, format.format)
+          }
           format={format}
           filename={`${photo.name}-edited`}
         />
