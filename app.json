@@ -32,6 +32,24 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "slab edit opens the photo you pick so you can black out its serial number.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "slab edit opens the photo you pick so you can black out its serial number.",
+          "savePhotosPermission": "slab edit saves your edited slab photos to your library.",
+          "granularPermissions": [
+            "photo"
+          ]
+        }
       ]
     ],
     "experiments": {
