@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { ExportActions } from "@/components/ExportActions";
+import { drawCredit } from "@/lib/credit";
 import { WatermarkSheet } from "@/components/WatermarkSheet";
 import { choosePhotoAsset, loadPhoto, type Photo } from "@/lib/photo";
 import {
@@ -278,6 +279,26 @@ export function SlabEditor() {
               }
             />
           ))}
+        {/* Over the boxes, as in the export, so a box can't hide it. Touches
+            pass through to the boxes underneath. */}
+        {fit && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.photo,
+              { left: fit.left, top: fit.top, width: fit.width, height: fit.height },
+            ]}
+          >
+            <Canvas style={StyleSheet.absoluteFill}>
+              <Picture
+                picture={createPicture(
+                  (canvas) => drawCredit(canvas, fit.width, fit.height),
+                  fit,
+                )}
+              />
+            </Canvas>
+          </View>
+        )}
         {loading && (
           <View style={[StyleSheet.absoluteFill, styles.center]}>
             <ActivityIndicator color={theme.text} />
