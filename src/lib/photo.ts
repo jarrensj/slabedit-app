@@ -2,6 +2,8 @@ import { Skia, type SkImage } from "@shopify/react-native-skia";
 import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
+import * as Sharing from "expo-sharing";
+import { type ExportFormat } from "@/lib/slab-image";
 
 export type Photo = {
   name: string;
@@ -65,4 +67,25 @@ export async function saveToPhotos(bytes: Uint8Array, name: string) {
   } finally {
     file.delete();
   }
+}
+
+export function canShare() {
+  return Sharing.isAvailableAsync();
+}
+
+// Opens the share sheet (Save Image, Messages, AirDrop, …) with the file.
+// The file isn't deleted afterwards, since the app it was shared to may still
+// be reading it. It keeps the same name each time, so the cache holds at most
+// one shared copy.
+export async function sharePhoto(
+  bytes: Uint8Array,
+  name: string,
+  format: ExportFormat,
+) {
+  const file = await writeTempFile(bytes, name);
+  await Sharing.shareAsync(file.uri, {
+    mimeType: format.mimeType,
+    UTI: format.uti,
+    dialogTitle: "Share photo",
+  });
 }

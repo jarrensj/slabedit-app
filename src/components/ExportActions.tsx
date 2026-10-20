@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
-import { PermissionDeniedError, saveToPhotos } from "@/lib/photo";
+import {
+  PermissionDeniedError,
+  canShare,
+  saveToPhotos,
+  sharePhoto,
+} from "@/lib/photo";
 import { type ExportFormat } from "@/lib/slab-image";
 import { useTheme } from "@/lib/theme";
 
 type Failure = { message: string; openSettings?: boolean };
 
-// Lets "Saving…" paint before the render, which runs on the JS thread.
+// Lets "Saving…" / "Opening…" paint before the render, which runs on the JS
+// thread.
 function nextFrame() {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
@@ -22,12 +28,34 @@ export function ExportActions({
   filename: string;
 }) {
   const theme = useTheme();
+  const [shareAvailable, setShareAvailable] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // One full-size render at a time.
+  const busy = sharing || saving;
+
+  useEffect(() => {
+    canShare().then(setShareAvailable);
+  }, []);
+
+  async function onShare() {
+    if (busy) return;
+    setFailure(null);
+    setSharing(true);
+    try {
+      await nextFrame();
+      await sharePhoto(render(), `${filename}.${format.ext}`, format);
+    } catch {
+      setFailure({ message: "Couldn't share the photo." });
+    } finally {
+      setSharing(false);
+    }
+  }
 
   async function onSave() {
-    if (saving) return;
+    if (busy) return;
     setFailure(null);
     setSaving(true);
     try {
@@ -51,11 +79,18 @@ export function ExportActions({
 
   return (
     <View style={styles.column}>
+      {shareAvailable && (
+        <Button
+          title={sharing ? "Opening…" : "Share"}
+          onPress={onShare}
+          disabled={busy}
+        />
+      )}
       <Button
         variant="primary"
         title={saving ? "Saving…" : saved ? "✓ Saved to Photos" : "Save to Photos"}
         onPress={onSave}
-        disabled={saving}
+        disabled={busy}
       />
       {failure && (
         <View style={styles.failure} accessibilityRole="alert">

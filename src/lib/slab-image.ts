@@ -55,15 +55,20 @@ export function resizeBox(box: Box, dw: number, dh: number): Box {
   };
 }
 
-export type ExportFormat = { format: ImageFormat; mimeType: string; ext: string };
+export type ExportFormat = {
+  format: ImageFormat;
+  mimeType: string;
+  ext: string;
+  uti: string;
+};
 
 // JPEG photos stay JPEG: a PNG of a 12MP phone photo is several times larger
 // and can blow past upload limits. The picker hands HEIC photos over as JPEG.
 // Anything else may have transparency, so it becomes PNG.
 export function exportFormat(mimeType: string | null | undefined): ExportFormat {
   return mimeType === "image/jpeg"
-    ? { format: ImageFormat.JPEG, mimeType: "image/jpeg", ext: "jpg" }
-    : { format: ImageFormat.PNG, mimeType: "image/png", ext: "png" };
+    ? { format: ImageFormat.JPEG, mimeType: "image/jpeg", ext: "jpg", uti: "public.jpeg" }
+    : { format: ImageFormat.PNG, mimeType: "image/png", ext: "png", uti: "public.png" };
 }
 
 // Draws the photo scaled into a width × height area at the canvas's origin.
