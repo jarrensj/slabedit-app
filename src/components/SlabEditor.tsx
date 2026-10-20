@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
   type GestureResponderEvent,
@@ -12,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { ExportActions } from "@/components/ExportActions";
+import { WatermarkSheet } from "@/components/WatermarkSheet";
 import { choosePhotoAsset, loadPhoto, type Photo } from "@/lib/photo";
 import {
   type Box,
@@ -24,6 +26,7 @@ import {
   resizeBox,
 } from "@/lib/slab-image";
 import { type Theme, useTheme } from "@/lib/theme";
+import { drawWatermark, hasWatermark, useWatermark } from "@/lib/watermark";
 
 type Size = { width: number; height: number };
 type Fit = Size & { left: number; top: number };
@@ -140,6 +143,12 @@ export function SlabEditor() {
   const [stage, setStage] = useState<Size>({ width: 0, height: 0 });
   const [loading, setLoading] = useState(false);
   const [openFailed, setOpenFailed] = useState(false);
+  const watermark = useWatermark();
+  const [watermarkOn, setWatermarkOn] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // Same object until the settings change.
+  const activeWatermark =
+    watermarkOn && hasWatermark(watermark) ? watermark : null;
 
   async function choosePhoto() {
     const asset = await choosePhotoAsset();
@@ -197,6 +206,19 @@ export function SlabEditor() {
           )}
         </Pressable>
         {openFailed && <OpenFailed theme={theme} />}
+        {/* So it can be set up before picking a photo. */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setSheetOpen(true)}
+          style={styles.link}
+        >
+          <Text style={[styles.linkText, { color: theme.muted }]} numberOfLines={1}>
+            {hasWatermark(watermark)
+              ? `Watermark: “${watermark.text.trim()}” · Edit`
+              : "+ Add a watermark"}
+          </Text>
+        </Pressable>
+        <WatermarkSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} photo={null} />
       </SafeAreaView>
     );
   }
@@ -220,10 +242,12 @@ export function SlabEditor() {
           >
             <Canvas style={StyleSheet.absoluteFill}>
               <Picture
-                picture={createPicture(
-                  (canvas) => drawPhoto(canvas, photo.image, fit.width, fit.height),
-                  fit,
-                )}
+                picture={createPicture((canvas) => {
+                  drawPhoto(canvas, photo.image, fit.width, fit.height);
+                  if (activeWatermark) {
+                    drawWatermark(canvas, fit.width, fit.height, activeWatermark);
+                  }
+                }, fit)}
               />
             </Canvas>
           </View>
@@ -250,6 +274,38 @@ export function SlabEditor() {
       </View>
 
       <View style={styles.dock}>
+        <View style={styles.watermarkRow}>
+          {hasWatermark(watermark) ? (
+            <>
+              <Switch
+                value={watermarkOn}
+                onValueChange={setWatermarkOn}
+                accessibilityLabel="Watermark"
+              />
+              <Text style={[styles.watermarkText, { color: theme.text }]} numberOfLines={1}>
+                Watermark{" "}
+                <Text style={{ color: theme.muted }}>“{watermark.text.trim()}”</Text>
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setSheetOpen(true)}
+                style={styles.link}
+              >
+                <Text style={[styles.linkText, { color: theme.text }]}>Edit</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setSheetOpen(true)}
+              style={styles.link}
+            >
+              <Text style={[styles.linkText, { color: theme.text }]}>
+                + Add a watermark
+              </Text>
+            </Pressable>
+          )}
+        </View>
         {openFailed ? (
           <OpenFailed theme={theme} />
         ) : (
@@ -272,14 +328,21 @@ export function SlabEditor() {
           />
         </View>
         <ExportActions
-          render={() => renderEdited(photo.image, boxes, format.format)}
+          render={() =>
+            renderEdited(photo.image, boxes, format.format, activeWatermark)
+          }
           renderBase64={() =>
-            renderEditedBase64(photo.image, boxes, format.format)
+            renderEditedBase64(photo.image, boxes, format.format, activeWatermark)
           }
           format={format}
           filename={`${photo.name}-edited`}
         />
       </View>
+      <WatermarkSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        photo={photo.image}
+      />
     </SafeAreaView>
   );
 }
@@ -343,6 +406,16 @@ const styles = StyleSheet.create({
   removeText: { fontSize: 16, lineHeight: 18, color: "#18181b" },
   dock: { gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
   hint: { fontSize: 13, textAlign: "center" },
+  watermarkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    minHeight: 44,
+  },
+  watermarkText: { flexShrink: 1, fontSize: 14 },
+  link: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 4 },
+  linkText: { fontSize: 14, fontWeight: "600", textDecorationLine: "underline" },
   row: { flexDirection: "row", gap: 8 },
   grow: { flex: 1 },
 });

@@ -6,6 +6,7 @@ import {
   type SkCanvas,
   type SkImage,
 } from "@shopify/react-native-skia";
+import { type Watermark, drawWatermark } from "@/lib/watermark";
 
 // A black box as fractions of the photo's width/height, so it is independent
 // of how large the preview renders and maps straight onto the full-size
@@ -116,6 +117,7 @@ export function drawBoxes(
 function render<T>(
   image: SkImage,
   boxes: Box[],
+  watermark: Watermark | null,
   encode: (snapshot: SkImage) => T,
 ): T {
   const scale = Math.min(
@@ -130,6 +132,8 @@ function render<T>(
   try {
     const canvas = surface.getCanvas();
     drawPhoto(canvas, image, width, height);
+    // Under the boxes, so a box always covers what it hides completely.
+    if (watermark) drawWatermark(canvas, width, height, watermark);
     drawBoxes(canvas, boxes, width, height);
     surface.flush();
     const snapshot = surface.makeImageSnapshot();
@@ -147,8 +151,11 @@ export function renderEdited(
   image: SkImage,
   boxes: Box[],
   format: ImageFormat,
+  watermark: Watermark | null,
 ): Uint8Array {
-  return render(image, boxes, (s) => s.encodeToBytes(format, JPEG_QUALITY));
+  return render(image, boxes, watermark, (s) =>
+    s.encodeToBytes(format, JPEG_QUALITY),
+  );
 }
 
 // For the clipboard, which takes base64.
@@ -156,6 +163,9 @@ export function renderEditedBase64(
   image: SkImage,
   boxes: Box[],
   format: ImageFormat,
+  watermark: Watermark | null,
 ): string {
-  return render(image, boxes, (s) => s.encodeToBase64(format, JPEG_QUALITY));
+  return render(image, boxes, watermark, (s) =>
+    s.encodeToBase64(format, JPEG_QUALITY),
+  );
 }
