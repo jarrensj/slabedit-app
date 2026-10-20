@@ -110,13 +110,14 @@ export function drawBoxes(
   }
 }
 
-// Renders the full-size photo with the boxes painted into the pixels.
-// Re-encoding also drops the photo's metadata, including any GPS location.
-export function renderEdited(
+// Renders the full-size photo with the boxes painted into the pixels, then
+// encodes it. Re-encoding also drops the photo's metadata, including any GPS
+// location.
+function render<T>(
   image: SkImage,
   boxes: Box[],
-  format: ImageFormat,
-): Uint8Array {
+  encode: (snapshot: SkImage) => T,
+): T {
   const scale = Math.min(
     1,
     Math.sqrt(MAX_PIXELS / (image.width() * image.height())),
@@ -133,11 +134,28 @@ export function renderEdited(
     surface.flush();
     const snapshot = surface.makeImageSnapshot();
     try {
-      return snapshot.encodeToBytes(format, JPEG_QUALITY);
+      return encode(snapshot);
     } finally {
       snapshot.dispose();
     }
   } finally {
     surface.dispose();
   }
+}
+
+export function renderEdited(
+  image: SkImage,
+  boxes: Box[],
+  format: ImageFormat,
+): Uint8Array {
+  return render(image, boxes, (s) => s.encodeToBytes(format, JPEG_QUALITY));
+}
+
+// For the clipboard, which takes base64.
+export function renderEditedBase64(
+  image: SkImage,
+  boxes: Box[],
+  format: ImageFormat,
+): string {
+  return render(image, boxes, (s) => s.encodeToBase64(format, JPEG_QUALITY));
 }
