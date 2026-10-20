@@ -12,6 +12,7 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -23,6 +24,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { Slider } from "@/components/Slider";
+import { choosePhotoAsset } from "@/lib/photo";
 import { drawPhoto } from "@/lib/slab-image";
 import { type Theme, useTheme } from "@/lib/theme";
 import {
@@ -32,6 +34,7 @@ import {
   type Watermark,
   drawWatermark,
   hasWatermark,
+  logoFromUri,
   saveWatermark,
   useWatermark,
 } from "@/lib/watermark";
@@ -132,6 +135,22 @@ export function WatermarkSheet({
   const opacity = Math.round(watermark.opacity * 100);
   const update = (patch: Partial<Watermark>) => saveWatermark({ ...watermark, ...patch });
   const nudge = useEmptyBackspaceNudge(watermark.text.length === 0);
+  const [addingLogo, setAddingLogo] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  async function chooseLogo() {
+    const asset = await choosePhotoAsset();
+    if (!asset) return;
+    setLogoFailed(false);
+    setAddingLogo(true);
+    try {
+      update({ image: await logoFromUri(asset.uri) });
+    } catch {
+      setLogoFailed(true);
+    } finally {
+      setAddingLogo(false);
+    }
+  }
 
   return (
     <Modal
@@ -152,8 +171,8 @@ export function WatermarkSheet({
                 Watermark
               </Text>
               <Text style={[styles.body, { color: theme.muted }]}>
-                Saved on this device and added to every photo you save. Switch it
-                off for a single photo.
+                Text, a logo, or both. Saved on this device and added to every
+                photo you save; switch it off for a single photo.
               </Text>
             </View>
 
@@ -178,6 +197,44 @@ export function WatermarkSheet({
                   style={[styles.input, { color: theme.text, borderColor: theme.border }]}
                 />
               </Animated.View>
+            </View>
+
+            <View style={styles.field}>
+              <Label theme={theme}>LOGO</Label>
+              <View style={styles.logoRow}>
+                {watermark.image && (
+                  <Image
+                    accessibilityLabel="Logo"
+                    source={{ uri: `data:image/png;base64,${watermark.image}` }}
+                    resizeMode="contain"
+                    style={[styles.logo, { borderColor: theme.border }]}
+                  />
+                )}
+                <Button
+                  title={
+                    addingLogo
+                      ? "Adding…"
+                      : watermark.image
+                        ? "Change logo"
+                        : "Upload a logo"
+                  }
+                  onPress={chooseLogo}
+                  disabled={addingLogo}
+                  style={styles.grow}
+                />
+                {watermark.image && (
+                  <Button
+                    title="Remove logo"
+                    onPress={() => update({ image: null })}
+                    style={styles.grow}
+                  />
+                )}
+              </View>
+              {logoFailed && (
+                <Text accessibilityRole="alert" style={[styles.detail, { color: theme.danger }]}>
+                  Couldn&apos;t open that image. Try a PNG or JPG.
+                </Text>
+              )}
             </View>
 
             <View style={styles.field}>
@@ -258,6 +315,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     fontSize: 16,
   },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  logo: { width: 48, height: 48, borderWidth: 1, borderRadius: 8 },
   segments: { flexDirection: "row", borderWidth: 1, borderRadius: 11, padding: 3, gap: 3 },
   segment: { flex: 1, minHeight: 44, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   segmentText: { fontSize: 15, fontWeight: "600" },

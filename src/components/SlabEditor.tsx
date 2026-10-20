@@ -2,6 +2,7 @@ import { Canvas, Picture, createPicture } from "@shopify/react-native-skia";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   StyleSheet,
   Switch,
@@ -26,7 +27,12 @@ import {
   resizeBox,
 } from "@/lib/slab-image";
 import { type Theme, useTheme } from "@/lib/theme";
-import { drawWatermark, hasWatermark, useWatermark } from "@/lib/watermark";
+import {
+  type Watermark,
+  drawWatermark,
+  hasWatermark,
+  useWatermark,
+} from "@/lib/watermark";
 
 type Size = { width: number; height: number };
 type Fit = Size & { left: number; top: number };
@@ -36,6 +42,12 @@ type Fit = Size & { left: number; top: number };
 // reliably on every platform, so the controls stay inside the stage.
 const STAGE_PADDING = 24;
 const HIT = 44;
+
+function describeWatermark(watermark: Watermark) {
+  const text = watermark.text.trim();
+  if (watermark.image && text) return `logo + “${text}”`;
+  return watermark.image ? "logo" : `“${text}”`;
+}
 
 // The largest size with the photo's aspect ratio that fits the stage.
 function fitPhoto(photo: Size, stage: Size): Fit | null {
@@ -214,7 +226,7 @@ export function SlabEditor() {
         >
           <Text style={[styles.linkText, { color: theme.muted }]} numberOfLines={1}>
             {hasWatermark(watermark)
-              ? `Watermark: “${watermark.text.trim()}” · Edit`
+              ? `Watermark: ${describeWatermark(watermark)} · Edit`
               : "+ Add a watermark"}
           </Text>
         </Pressable>
@@ -282,9 +294,19 @@ export function SlabEditor() {
                 onValueChange={setWatermarkOn}
                 accessibilityLabel="Watermark"
               />
+              {watermark.image && (
+                <Image
+                  accessibilityIgnoresInvertColors
+                  source={{ uri: `data:image/png;base64,${watermark.image}` }}
+                  resizeMode="contain"
+                  style={styles.logoThumb}
+                />
+              )}
               <Text style={[styles.watermarkText, { color: theme.text }]} numberOfLines={1}>
                 Watermark{" "}
-                <Text style={{ color: theme.muted }}>“{watermark.text.trim()}”</Text>
+                {watermark.text.trim() ? (
+                  <Text style={{ color: theme.muted }}>“{watermark.text.trim()}”</Text>
+                ) : null}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -414,6 +436,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   watermarkText: { flexShrink: 1, fontSize: 14 },
+  logoThumb: { width: 20, height: 20 },
   link: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 4 },
   linkText: { fontSize: 14, fontWeight: "600", textDecorationLine: "underline" },
   row: { flexDirection: "row", gap: 8 },
