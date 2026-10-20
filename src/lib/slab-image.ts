@@ -6,6 +6,7 @@ import {
   type SkCanvas,
   type SkImage,
 } from "@shopify/react-native-skia";
+import { drawCredit } from "@/lib/credit";
 import { type Watermark, drawWatermark } from "@/lib/watermark";
 
 // A black box as fractions of the photo's width/height, so it is independent
@@ -135,6 +136,8 @@ function render<T>(
     // Under the boxes, so a box always covers what it hides completely.
     if (watermark) drawWatermark(canvas, width, height, watermark);
     drawBoxes(canvas, boxes, width, height);
+    // Over the boxes, so a box can't hide it.
+    drawCredit(canvas, width, height);
     surface.flush();
     const snapshot = surface.makeImageSnapshot();
     try {
