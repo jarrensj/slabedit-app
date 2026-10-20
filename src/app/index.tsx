@@ -1,17 +1,13 @@
-import { Text, View, StyleSheet } from "react-native";
+import { Stack } from "expo-router";
+import { SlabEditor } from "@/components/SlabEditor";
 
+// TODO: rename the app from "my-app" to "slab edit" in app.json (name, slug,
+// scheme), so the home screen and the permission prompts use the same name.
 export default function Index() {
   return (
-    <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
-    </View>
+    <>
+      <Stack.Screen options={{ title: "slab edit" }} />
+      <SlabEditor />
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
